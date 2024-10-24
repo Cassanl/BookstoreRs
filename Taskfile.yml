@@ -1,0 +1,6 @@
+version: '3
+
+tasks:
+  vcs:
+    cmds:
+    - git push -u https://github.com/Cassanl/BookstoreRs.git main
