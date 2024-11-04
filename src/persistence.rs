@@ -5,7 +5,7 @@ pub const USER_COLL: &'static str = "users";
 
 pub struct DBMap<'a, T> {
     pub key: &'a str,
-    pub value: T,   
+    pub value: T,
 }
 
 pub async fn init_mongodb() -> Result<mongodb::Client, mongodb::error::Error> {
@@ -13,3 +13,4 @@ pub async fn init_mongodb() -> Result<mongodb::Client, mongodb::error::Error> {
     let client: mongodb::Client = mongodb::Client::with_uri_str(db_uri).await?;
     Ok(client)
 }
+    

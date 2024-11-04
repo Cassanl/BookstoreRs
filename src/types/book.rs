@@ -6,3 +6,9 @@ pub struct Book {
     pub id: String,
     pub title: String,
 }
+
+impl Book {
+    pub fn new(title: String) -> Self {
+        Self { id: String::new(), title }
+    }
+}
