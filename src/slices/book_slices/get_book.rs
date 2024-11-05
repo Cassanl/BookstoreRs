@@ -4,71 +4,56 @@ use axum::{
     Json,
 };
 use mongodb::bson::doc;
-use serde::Serialize;
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use crate::{
     error::ApiError,
-    persistence::{self, DBMap},
-    types::book::Book,
+    persistence,
+    types::book::{Book, SingleBookResponse},
     AppState,
 };
-
-#[derive(Serialize)]
-pub struct GetBookResponse {
-    #[serde(rename = "_id")]
-    pub id: String,
-    pub title: String,
-    pub err: Option<String>,
-}
-
-impl From<Book> for GetBookResponse {
-    fn from(value: Book) -> Self {
-        Self {
-            id: value.id,
-            title: value.title,
-            err: None,
-        }
-    }
-}
 
 pub async fn get_book_handler(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> (StatusCode, Json<GetBookResponse>) {
-    let (status, book_resp) = handle(state.mongo_client.clone(), id).await;
-    (status, Json(book_resp))
-}
-
-async fn handle(c: Arc<mongodb::Client>, id: String) -> (StatusCode, GetBookResponse) {
-    let book: Result<Book, ApiError> = get_book_by_id(
-        c,
-        DBMap {
-            key: "_id",
-            value: id,
-        },
-    )
-    .await;
-
-    match book {
-        Ok(b) => (StatusCode::OK, GetBookResponse::from(b)),
-        Err(err) => panic!("{:?}", err.to_string()),
+) -> Result<(StatusCode, Json<SingleBookResponse>), (StatusCode, String)> {
+    let res = handle(state.mongo_client.clone(), id).await;
+    match res {
+        Ok((status, book_resp)) => Ok((status, Json(book_resp))),
+        Err(err) => Err((err.0, err.1.to_string())),
     }
 }
 
-async fn get_book_by_id<'a>(
+async fn handle(
     c: Arc<mongodb::Client>,
-    filter: DBMap<'a, String>,
-) -> Result<Book, ApiError> {
+    id: String,
+) -> Result<(StatusCode, SingleBookResponse), (StatusCode, ApiError)> {
+    let book: Result<Book, ApiError> = get_book_by_id(c, &id).await;
+
+    match book {
+        Ok(b) => Ok((StatusCode::OK, SingleBookResponse::from(b))),
+        Err(err) => Err((StatusCode::INTERNAL_SERVER_ERROR, err)),
+    }
+}
+
+async fn get_book_by_id<'a>(c: Arc<mongodb::Client>, id: &str) -> Result<Book, ApiError> {
+    let oid = match mongodb::bson::oid::ObjectId::from_str(id) {
+        Ok(oid) => oid,
+        Err(_) => return Err(ApiError::InternalServerError),
+    };
+    println!("OID {:?}", oid);
     let book_coll: mongodb::Collection<Book> = c
         .clone()
         .database(persistence::DB_NAME)
         .collection(persistence::BOOK_COLL);
-    let res_book = book_coll.find_one(doc! {filter.key: filter.value}).await;
+    let res_book = book_coll.find_one(doc! {"_id": oid}).await;
 
     let maybe_book = match res_book {
         Ok(b) => b,
-        Err(_) => return Err(ApiError::InternalServerError),
+        Err(err) => {
+            println!("{err}");
+            return Err(ApiError::InternalServerError);
+        }
     };
 
     match maybe_book {

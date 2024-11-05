@@ -1,43 +1,31 @@
+pub mod config;
 pub mod error;
 mod middlewares;
 pub mod persistence;
 mod slices;
 mod types;
 
-use std::sync::Arc;
-
-use axum::{routing::{get, post}, Router};
+use axum::{
+    routing::{get, post},
+    Router,
+};
+use config::{AppConfig, Environment};
 use persistence::DB_NAME;
+use std::sync::Arc;
 use tokio::net::TcpListener;
-
-#[derive(PartialEq)]
-enum Environment {
-    Prod,
-    Dev
-}
-
-impl From<&str> for Environment {
-    fn from(value: &str) -> Self {
-        match value {
-            "PROD" => Self::Prod,
-            "DEV" => Self::Dev,
-            _ => Self::Dev,
-        }
-    }
-}
 
 #[tokio::main]
 async fn main() {
-    let mongo_client: mongodb::Client = persistence::init_mongodb().await.unwrap();
+    let config: AppConfig = AppConfig::new();
+    let env_lvl: Environment = Environment::from(config.server_conf.level.as_str());
 
-    let env: Environment = match std::env::var("ENV") {
-        Ok(val) => Environment::from(val.as_str()),
-        Err(_) => Environment::Dev
-    };
+    let mongo_client: mongodb::Client = persistence::init_mongodb(&config.mongodb_conf.uri)
+        .await
+        .unwrap();
 
-    if env == Environment::Dev {
+    if env_lvl == Environment::Dev {
         println!("[DEV] db sync");
-        _ = mongo_client.database(DB_NAME).drop();
+        _ = mongo_client.database(DB_NAME).drop().await.unwrap();
     }
 
     let listener: TcpListener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
@@ -64,8 +52,11 @@ fn app(app_state: AppState) -> Router {
         .nest(
             "/books",
             Router::new()
-            .route("/:id", get(slices::book_slices::get_book::get_book_handler))
-            .route("/", post(slices::book_slices::post_book::insert_book_handler)),
+                .route("/:id", get(slices::book_slices::get_book::get_book_handler))
+                .route(
+                    "/",
+                    post(slices::book_slices::post_book::insert_book_handler),
+                ),
         )
         .with_state(app_state);
 
