@@ -6,7 +6,7 @@ mod slices;
 mod types;
 
 use axum::{
-    routing::{get, post},
+    routing::{get, post, put},
     Router,
 };
 use config::{AppConfig, Environment};
@@ -47,18 +47,14 @@ impl AppState {
 }
 
 fn app(app_state: AppState) -> Router {
-    let api_router = Router::new()
+    Router::new()
         .route("/ping", get(|| async { "ping" }))
         .nest(
             "/books",
             Router::new()
                 .route("/:id", get(slices::book_slices::get_book::get_book_handler))
-                .route(
-                    "/",
-                    post(slices::book_slices::post_book::insert_book_handler),
-                ),
+                .route("/", post(slices::book_slices::post_book::post_book_handler))
+                .route("/", put(slices::book_slices::put_book::put_book_handler)),
         )
-        .with_state(app_state);
-
-    api_router
+        .with_state(app_state)
 }

@@ -1,11 +1,11 @@
-use std::sync::Arc;
+use std::{clone, sync::Arc};
 
 use axum::{extract::State, http::StatusCode, Json};
 use serde::Deserialize;
 
 use crate::{
     error::ApiError,
-    persistence::{BOOK_COLL, DB_NAME},
+    persistence::{self, BOOK_COLL, DB_NAME},
     types::book::{Book, SingleBookResponse},
     AppState,
 };
@@ -26,7 +26,7 @@ impl InsertBookRequest {
     }
 }
 
-pub async fn insert_book_handler(
+pub async fn post_book_handler(
     State(state): State<AppState>,
     Json(req): Json<InsertBookRequest>,
 ) -> Result<(StatusCode, Json<SingleBookResponse>), (StatusCode, String)> {
@@ -55,7 +55,8 @@ async fn handle(
 }
 
 async fn insert_book(c: Arc<mongodb::Client>, b: Book) -> Result<Book, ApiError> {
-    let book_coll: mongodb::Collection<&Book> = c.clone().database(DB_NAME).collection(BOOK_COLL);
+    let book_coll: mongodb::Collection<Book> = c.clone().database(DB_NAME).collection(BOOK_COLL);
+    // let book_coll = persistence::get_mongo_collection(c.clone(), DB_NAME, BOOK_COLL);
 
     let result = book_coll.insert_one(&b).await;
 
