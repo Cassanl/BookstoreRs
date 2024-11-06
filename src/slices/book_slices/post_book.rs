@@ -1,16 +1,17 @@
-use std::{clone, sync::Arc};
+use std::sync::Arc;
 
 use axum::{extract::State, http::StatusCode, Json};
 use serde::Deserialize;
 
 use crate::{
     error::ApiError,
-    persistence::{self, BOOK_COLL, DB_NAME},
-    types::book::{Book, SingleBookResponse},
+    persistence::{BOOK_COLL, DB_NAME},
+    types::{
+        self,
+        book::{Book, SingleBookResponse},
+    },
     AppState,
 };
-
-const MAX_TITLE_LEN: usize = 256;
 
 #[derive(Deserialize)]
 pub struct InsertBookRequest {
@@ -19,7 +20,7 @@ pub struct InsertBookRequest {
 
 impl InsertBookRequest {
     pub fn validate(&self) -> Option<ApiError> {
-        if self.title.len() > MAX_TITLE_LEN {
+        if self.title.len() > types::book::MAX_TITLE_LEN {
             return Some(ApiError::TextTooLong("title".to_owned()));
         }
         None
@@ -65,9 +66,6 @@ async fn insert_book(c: Arc<mongodb::Client>, b: Book) -> Result<Book, ApiError>
             res.inserted_id.as_object_id().unwrap(),
             b.title,
         )),
-        Err(err) => {
-            println!("{err}");
-            Err(ApiError::InternalServerError)
-        }
+        Err(_) => Err(ApiError::InternalServerError),
     }
 }

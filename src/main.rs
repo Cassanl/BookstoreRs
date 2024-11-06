@@ -16,7 +16,7 @@ use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() {
-    let config: AppConfig = AppConfig::new();
+    let config: AppConfig = AppConfig::default();
     let env_lvl: Environment = Environment::from(config.server_conf.level.as_str());
 
     let mongo_client: mongodb::Client = persistence::init_mongodb(&config.mongodb_conf.uri)
@@ -25,7 +25,7 @@ async fn main() {
 
     if env_lvl == Environment::Dev {
         println!("[DEV] db sync");
-        _ = mongo_client.database(DB_NAME).drop().await.unwrap();
+        mongo_client.database(DB_NAME).drop().await.unwrap();
     }
 
     let listener: TcpListener = TcpListener::bind("0.0.0.0:3000").await.unwrap();

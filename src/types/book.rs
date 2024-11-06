@@ -1,7 +1,9 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+pub const MAX_TITLE_LEN: usize = 256;
+
+#[derive(Serialize, Deserialize, Default)]
 pub struct Book {
     #[serde(rename = "_id", skip_serializing)]
     pub id: Option<ObjectId>,
@@ -21,26 +23,11 @@ impl Book {
     }
 }
 
-impl Default for Book {
-    fn default() -> Self {
-        Self {
-            id: None,
-            title: String::new(),
-        }
-    }
-}
-
-#[derive(Serialize)]
+#[derive(Serialize, Default)]
 pub struct SingleBookResponse {
     #[serde(rename = "_id")]
     pub id: String,
     pub title: String,
-}
-
-impl SingleBookResponse {
-    pub fn new(id: String, title: String) -> Self {
-        Self { id, title }
-    }
 }
 
 impl From<Book> for SingleBookResponse {
@@ -48,15 +35,6 @@ impl From<Book> for SingleBookResponse {
         Self {
             id: value.id.unwrap().to_string(),
             title: value.title,
-        }
-    }
-}
-
-impl Default for SingleBookResponse {
-    fn default() -> Self {
-        Self {
-            id: String::new(),
-            title: String::new(),
         }
     }
 }

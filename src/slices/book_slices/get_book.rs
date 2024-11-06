@@ -41,7 +41,7 @@ async fn get_book_by_id<'a>(c: Arc<mongodb::Client>, id: &str) -> Result<Book, A
         Ok(oid) => oid,
         Err(_) => return Err(ApiError::InternalServerError),
     };
-    println!("OID {:?}", oid);
+
     let book_coll: mongodb::Collection<Book> = c
         .clone()
         .database(persistence::DB_NAME)
@@ -50,10 +50,7 @@ async fn get_book_by_id<'a>(c: Arc<mongodb::Client>, id: &str) -> Result<Book, A
 
     let maybe_book = match res_book {
         Ok(b) => b,
-        Err(err) => {
-            println!("{err}");
-            return Err(ApiError::InternalServerError);
-        }
+        Err(_) => return Err(ApiError::InternalServerError),
     };
 
     match maybe_book {

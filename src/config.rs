@@ -28,6 +28,12 @@ impl AppConfig {
     }
 }
 
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Deserialize)]
 pub struct ServerConfig {
     pub http_listen_address: String,
